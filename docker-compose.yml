@@ -1,0 +1,57 @@
+version: '3.5'
+
+networks:
+  frontend:
+    driver: ${NETWORKS_DRIVER}
+  backend:
+    driver: ${NETWORKS_DRIVER}
+
+volumes:
+  postgres:
+    driver: ${VOLUMES_DRIVER}  
+
+services:
+
+### PostgreSQL ###########################################
+    postgres:
+      build:
+        context: ./postgres
+        args:
+          - POSTGRES_VERSION=${POSTGRES_VERSION}
+      volumes:
+        - ${DATA_PATH_POSTGRES}:/var/lib/postgresql/data
+        - ${POSTGRES_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+      ports:
+        - "${POSTGRES_PORT}:5432"
+      environment:
+        - POSTGRES_DB=${POSTGRES_DB}
+        - POSTGRES_USER=${POSTGRES_USER}
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}        
+      networks:
+        - backend
+
+### NGINX Server #########################################
+    nginx:
+      build:
+        context: ./nginx        
+      volumes:
+        - ${DATA_PATH_NGINX}:/var/www
+      ports:
+        - "${NGINX_HOST_HTTP_PORT}:80"
+        - "${NGINX_HOST_HTTPS_PORT}:443"
+      networks:
+        - frontend
+        - backend
+
+### NGINX Server #########################################
+    spring:
+      build:
+        context: ./spring-boot
+      depends_on:  
+        - postgres
+      volumes:
+        - ${DATA_PATH_SPRING}:/var/www        
+      ports:
+        - "${SPRING_PORT}:8080"
+      networks:
+        - backend
